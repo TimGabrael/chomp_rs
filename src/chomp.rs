@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 
-#[derive(PartialEq, Copy, Clone, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash)]
 pub struct Chomp<const WIDTH: usize, const HEIGHT: usize> {
     a: [[bool; WIDTH]; HEIGHT],
 }
@@ -78,21 +79,41 @@ impl<const WIDTH: usize, const HEIGHT: usize> Chomp<WIDTH, HEIGHT> {
         }
         return false;
     }
+    fn simulate_turn_hasher(&mut self, x: usize, y: usize, map: &mut HashMap<Chomp<WIDTH, HEIGHT>, (usize, usize)>) -> bool {
+        self.click(x, y);
 
-    pub fn get_best_move(&mut self) -> (usize, usize) {
+        let best_move = self.get_best_move_hasher(map);
+        if best_move.0 == std::usize::MAX {
+            return true;
+        }
+        return false;
+    }
+    fn get_best_move_hasher(&mut self, map: &mut HashMap<Chomp<WIDTH, HEIGHT>, (usize, usize)>) -> (usize, usize) {
+        if map.contains_key(self) {
+            return *map.get(self).unwrap();
+        }
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
                 if Chomp::<WIDTH, HEIGHT>::is_final_block(x, y) {
                     continue;
                 }
                 if !self.a[y][x] {
-                    if self.clone().simulate_turn(x, y) {
+                    let mut new_game = self.clone();
+                    if new_game.simulate_turn_hasher(x, y, map) {
+                        if !map.contains_key(self) {
+                            map.insert(*self, (x, y));
+                        }
                         return (x, y);
                     }
                 }
             }
         }
         return (std::usize::MAX, std::usize::MAX);
+    }
+
+    pub fn get_best_move(&mut self) -> (usize, usize) {
+        let mut map: HashMap<Chomp<WIDTH, HEIGHT>, (usize, usize)> = HashMap::new();
+        return self.get_best_move_hasher(&mut map);
     }
 
 }
